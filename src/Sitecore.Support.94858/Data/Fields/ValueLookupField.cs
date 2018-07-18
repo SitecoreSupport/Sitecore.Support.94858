@@ -1,12 +1,9 @@
 ﻿namespace Sitecore.Support.Data.Fields
 {
-  using Sitecore.Configuration;
-  using Sitecore.Data;
   using Sitecore.Data.Fields;
-  using Sitecore.Data.Items;
   using Sitecore.Diagnostics;
   using Sitecore.Links;
-  using Sitecore.Web.UI.HtmlControls.Data;
+  using System;
 
   /// <summary>
   /// Represents a Lookup field.
@@ -32,7 +29,27 @@
     public override void RemoveLink(ItemLink itemLink)
     {
       Assert.ArgumentNotNull(itemLink, "itemLink");
-      Clear();
+      #region Modified code
+      if (this.HasLink(itemLink))
+      {
+        Clear();
+      }
+      #endregion
     }
+
+    #region Added code
+    /// <summary>
+    /// Check if the field has a link to the passed itemlink
+    /// </summary>
+    /// <param name="itemLink">The item link that should be checked against the field value.</param>
+    /// <returns>The result</returns>
+    private bool HasLink(ItemLink itemLink)
+    {
+      Assert.IsNotNull(itemLink, nameof(itemLink));
+      if (string.IsNullOrEmpty(this.Value)) return false;
+      return Sitecore.Support.StringUtil.Contains(this.Value, itemLink.TargetPath, StringComparison.OrdinalIgnoreCase) ||
+             Sitecore.Support.StringUtil.Contains(this.Value, itemLink.TargetItemID.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+    #endregion
   }
 }

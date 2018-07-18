@@ -122,13 +122,28 @@ namespace Sitecore.Support.Data.Fields
                     if (item != null)
                     {
                       RenderingParametersFieldCollection parametersFields = GetParametersFields(item, renderingDefinition.Parameters);
-                      foreach (CustomField value2 in parametersFields.Values)
+                      #region Modified code
+                      foreach (var field in parametersFields.Values)
                       {
-                        if (!string.IsNullOrEmpty(value2.Value))
+                        if (this.IsCustomFieldHasLink(field, itemLink))
                         {
-                          value2.RemoveLink(itemLink);
+                          bool handleEditingContext = !field.InnerField.Item.Editing.IsEditing;
+
+                          if (handleEditingContext)
+                            field.InnerField.Item.Editing.BeginEdit();
+
+                          try
+                          {
+                            field.RemoveLink(itemLink);
+                          }
+                          finally
+                          {
+                            if (handleEditingContext)
+                              field.InnerField.Item.Editing.EndEdit();
+                          }
                         }
                       }
+                      #endregion
                       renderingDefinition.Parameters = parametersFields.GetParameters().ToString();
                     }
                   }
@@ -154,5 +169,19 @@ namespace Sitecore.Support.Data.Fields
       RenderingParametersFieldCollection.TryParse(layoutItem, parameters, out parametersFields);
       return parametersFields;
     }
+
+    #region Added code
+    /// <summary>
+    /// Check if the field value has a link to the itemlink
+    /// </summary>
+    private bool IsCustomFieldHasLink(CustomField field, ItemLink itemLink)
+    {
+      Assert.IsNotNull(field, nameof(field));
+      Assert.IsNotNull(itemLink, nameof(itemLink));
+      if (string.IsNullOrEmpty(field.Value)) return false;
+      return Sitecore.Support.StringUtil.Contains(field.Value, itemLink.TargetPath, StringComparison.OrdinalIgnoreCase) ||
+             Sitecore.Support.StringUtil.Contains(field.Value, itemLink.TargetItemID.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+    #endregion
   }
 }

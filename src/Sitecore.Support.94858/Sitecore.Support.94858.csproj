@@ -57,6 +57,7 @@
     <Compile Include="Data\Fields\LayoutField.cs" />
     <Compile Include="Data\Fields\ValueLookupField.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SupportStringUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Config\Include\zzz\Sitecore.Support.94858.config" />
