@@ -8,10 +8,7 @@ using Sitecore.Xml;
 using System;
 using System.Collections;
 using System.Xml;
-/// <summary>
-/// only RemoveLink method was changed
-/// in order to make the patch compatible with more versions, the class is inherited from original LayoutField
-/// </summary>
+
 namespace Sitecore.Support.Data.Fields
 {
   public class LayoutField : Sitecore.Data.Fields.LayoutField
@@ -50,6 +47,8 @@ namespace Sitecore.Support.Data.Fields
       this.data = this.LoadData();
     }
 
+    /// <summary>Removes the link.</summary>
+    /// <param name="itemLink">The item link.</param>
     public override void RemoveLink(ItemLink itemLink)
     {
       Assert.ArgumentNotNull(itemLink, "itemLink");
@@ -61,95 +60,99 @@ namespace Sitecore.Support.Data.Fields
         if (devices != null)
         {
           string b = itemLink.TargetItemID.ToString();
-          int i = devices.Count - 1;
-          while (i >= 0)
+          for (int num = devices.Count - 1; num >= 0; num--)
           {
-            DeviceDefinition deviceDefinition = devices[i] as DeviceDefinition;
+            DeviceDefinition deviceDefinition = devices[num] as DeviceDefinition;
             if (deviceDefinition != null)
             {
-              if (deviceDefinition.ID == b)
+              if (!(deviceDefinition.ID == b))
               {
-                devices.Remove(deviceDefinition);
-              }
-              else if (deviceDefinition.Layout == b)
-              {
-                deviceDefinition.Layout=(null);
-              }
-              else
-              {
+                if (deviceDefinition.Layout == b)
+                {
+                  deviceDefinition.Layout = null;
+                  continue;
+                }
                 if (deviceDefinition.Placeholders != null)
                 {
                   string targetPath = itemLink.TargetPath;
                   bool flag = false;
-                  for (int j = deviceDefinition.Placeholders.Count - 1; j >= 0; j--)
+                  for (int num2 = deviceDefinition.Placeholders.Count - 1; num2 >= 0; num2--)
                   {
-                    PlaceholderDefinition placeholderDefinition = deviceDefinition.Placeholders[j] as PlaceholderDefinition;
+                    PlaceholderDefinition placeholderDefinition = deviceDefinition.Placeholders[num2] as PlaceholderDefinition;
                     if (placeholderDefinition != null && (string.Equals(placeholderDefinition.MetaDataItemId, targetPath, StringComparison.InvariantCultureIgnoreCase) || string.Equals(placeholderDefinition.MetaDataItemId, b, StringComparison.InvariantCultureIgnoreCase)))
                     {
                       deviceDefinition.Placeholders.Remove(placeholderDefinition);
                       flag = true;
                     }
                   }
-                  if (flag)
+                  if (!flag)
                   {
-                    goto IL_309;
+                    goto IL_0119;
                   }
+                  continue;
                 }
-                if (deviceDefinition.Renderings != null)
+                goto IL_0119;
+              }
+              devices.Remove(deviceDefinition);
+            }
+            continue;
+            IL_0119:
+            if (deviceDefinition.Renderings != null)
+            {
+              for (int num3 = deviceDefinition.Renderings.Count - 1; num3 >= 0; num3--)
+              {
+                RenderingDefinition renderingDefinition = deviceDefinition.Renderings[num3] as RenderingDefinition;
+                if (renderingDefinition != null)
                 {
-                  for (int k = deviceDefinition.Renderings.Count - 1; k >= 0; k--)
+                  if (renderingDefinition.Datasource == itemLink.TargetPath)
                   {
-                    RenderingDefinition renderingDefinition = deviceDefinition.Renderings[k] as RenderingDefinition;
-                    if (renderingDefinition != null)
+                    renderingDefinition.Datasource = string.Empty;
+                  }
+                  if (renderingDefinition.ItemID == b)
+                  {
+                    deviceDefinition.Renderings.Remove(renderingDefinition);
+                  }
+                  if (renderingDefinition.Datasource == b)
+                  {
+                    renderingDefinition.Datasource = string.Empty;
+                  }
+                  if (!string.IsNullOrEmpty(renderingDefinition.Parameters))
+                  {
+                    Item item = base.InnerField.Database.GetItem(renderingDefinition.ItemID);
+                    if (item != null)
                     {
-                      if (renderingDefinition.Datasource == itemLink.TargetPath)
+                      RenderingParametersFieldCollection parametersFields = GetParametersFields(item, renderingDefinition.Parameters);
+                      foreach (CustomField value2 in parametersFields.Values)
                       {
-                        renderingDefinition.Datasource=(string.Empty);
-                      }
-                      if (renderingDefinition.ItemID == b)
-                      {
-                        deviceDefinition.Renderings.Remove(renderingDefinition);
-                      }
-                      if (renderingDefinition.Datasource == b)
-                      {
-                        renderingDefinition.Datasource=(string.Empty);
-                      }
-                      if (!string.IsNullOrEmpty(renderingDefinition.Parameters))
-                      {
-                        Item item = base.InnerField.Database.GetItem(renderingDefinition.ItemID);
-                        if (item != null)
+                        if (!string.IsNullOrEmpty(value2.Value))
                         {
-                          RenderingParametersFieldCollection parametersFields = this.GetParametersFields(item, renderingDefinition.Parameters);
-                          foreach (CustomField current in parametersFields.Values)
-                          {
-                            if (!string.IsNullOrEmpty(current.Value))
-                            {
-                              current.RemoveLink(itemLink);
-                            }
-                          }
+                          value2.RemoveLink(itemLink);
                         }
                       }
+                      renderingDefinition.Parameters = parametersFields.GetParameters().ToString();
                     }
                   }
                 }
               }
             }
-            IL_309:
-            i--;
-            continue;
-            goto IL_309;
           }
-          base.Value=(layoutDefinition.ToXml());
+          base.Value = layoutDefinition.ToXml();
         }
       }
     }
 
+    /// <summary>
+    /// Gets the parameters fields.
+    /// </summary>
+    /// <param name="layoutItem">The layout item.</param>
+    /// <param name="renderingParameters">The rendering parameters.</param>
+    /// <returns></returns>
     private RenderingParametersFieldCollection GetParametersFields(Item layoutItem, string renderingParameters)
     {
-      UrlString urlString = new UrlString(renderingParameters);
-      RenderingParametersFieldCollection result;
-      RenderingParametersFieldCollection.TryParse(layoutItem, urlString, out result);
-      return result;
+      UrlString parameters = new UrlString(renderingParameters);
+      RenderingParametersFieldCollection parametersFields;
+      RenderingParametersFieldCollection.TryParse(layoutItem, parameters, out parametersFields);
+      return parametersFields;
     }
   }
 }
